@@ -1,32 +1,19 @@
 package com.example.testjavafx.client;
 
-import com.example.testjavafx.HelloApplication;
-import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
+import com.example.testjavafx.gui_controllers.ChatViewController;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Scanner;
 
 public class Client {
-
     private Socket clientSocket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
-    private String clientUsername;
 
-    public String getClientUsername() {
-        return clientUsername;
-    }
 
-    public void setClientUsername(String clientUsername) {
-        this.clientUsername = clientUsername;
-    }
 
-    public void closeEverything(Socket _clientSocket, BufferedReader _bufferedReader, BufferedWriter _bufferedWriter){
+    public void closeSockets(Socket _clientSocket, BufferedReader _bufferedReader, BufferedWriter _bufferedWriter){
         try{
             if(_bufferedReader != null)
                 _bufferedReader.close();
@@ -40,17 +27,16 @@ public class Client {
             System.out.println("Error closing everything");
         }
     }
-    public Client(Socket clientSocket, String clientUsername) {
-        this.clientSocket = clientSocket;
-        this.clientUsername = clientUsername;
+    public Client(Socket _clientSocket) {
+
+        this.clientSocket = _clientSocket;
+
 
         try{
             bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             bufferedWriter = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
-
         }catch (IOException ioException){
-            closeEverything(clientSocket,bufferedReader,bufferedWriter);
-
+            closeSockets(clientSocket,bufferedReader,bufferedWriter);
         }
     }
 
@@ -60,29 +46,49 @@ public class Client {
             bufferedWriter.newLine();
             bufferedWriter.flush();
 
-
         }catch(IOException ioException){
-            closeEverything(clientSocket,bufferedReader,bufferedWriter);
+            closeSockets(clientSocket,bufferedReader,bufferedWriter);
         }
     }
 
     public void listenForMessages(VBox vBox){
+        Thread threadForListening = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (clientSocket.isConnected()){
+                    try{
+                        String msgFromGroupChat = bufferedReader.readLine();
+                        ChatViewController.displayReceivedMessage(msgFromGroupChat,vBox);
+
+                    }catch (IOException ioException){
+                        System.out.println("Error receiving message from the Server");
+                        closeSockets(clientSocket,bufferedReader,bufferedWriter);
+                        break;
+                    }
+                }
+            }
+        });
+
+        threadForListening.start();
+        /*
         new Thread (new Runnable() {
             @Override
             public void run() {
                 while (clientSocket.isConnected()){
                     try{
                         String msgFromGroupChat = bufferedReader.readLine();
-                        ClientController.addLabel(msgFromGroupChat,vBox);
+                        ChatViewController.addLabel(msgFromGroupChat,vBox);
 
                     }catch (IOException ioException){
-                        System.out.println("Error receiving message from the com.example.test.server");
-                        closeEverything(clientSocket,bufferedReader,bufferedWriter);
+                        System.out.println("Error receiving message from the Server");
+                        closeSockets(clientSocket,bufferedReader,bufferedWriter);
                         break;
                     }
                 }
             }
         }).start();
+
+         */
     }
 
 
